@@ -71,3 +71,25 @@ projets** :
   - DLL système Windows (KERNEL32)
 - Aucun marqueur copyright / SPDX d'un tiers n'est présent dans le code.
 - Les binaires compilés ne lient que KERNEL32.dll et onnxruntime-genai.dll.
+
+
+## Sources des connaissances (provenance)
+
+Ce projet a été construit à partir de la **documentation publique officielle**
+AMD et ONNX Runtime GenAI — pas de code privé copié :
+
+| Connaissance | Source (officielle/public) |
+|---|---|
+| API onnxruntime_genai (Model, Tokenizer, Generator) | Documentation ONNX Runtime GenAI (Microsoft) |
+| Env RyzenAI conda 
+yzen-ai-1.7.1 + DLL deployment path | Installation AMD Ryzen AI Software (officielle) |
+| xrt-smi configure --pmode performance | Outil officiel AMD XRT |
+| Export ONNX INT4 + onnxruntime_genai.models.builder | Doc officielle ONNX Runtime GenAI |
+| Compilation NPU model_generate --npu --token_fusion | Outil officiel AMD model-generate (RyzenAI 1.7.1) |
+| Modèles hybrides pré-optimisés (md/*_hybrid sur HF) | AMD sur HuggingFace (officiel) |
+| Format GGUF (lecture gguf.GGUFReader) | Bibliothèque open source gguf-py (MIT) |
+| Named pipes Windows | API Windows standard (win32pipe/pywin32, PSF) |
+
+**Le code source de ce dépôt est la couche d'intégration de l'auteur** :
+daemon named pipe, protocole JSON, cache KV, client C++, convertisseur.
+Il n'incorpore pas le code des bibliothèques ci-dessus — il les appelle.
