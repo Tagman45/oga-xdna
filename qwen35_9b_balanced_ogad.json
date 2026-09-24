@@ -1,0 +1,2025 @@
+{
+  "qwen35_npu_static_plan": true,
+  "version": "2.0",
+  "strategy": "balanced",
+  "runtime": "ogad",
+  "hardware_profile": {
+    "_comment": "Central hardware profile for AMD XDNA2 NPU (Strix Point)",
+    "_calibrated": "2026-07-10",
+    "_sources": [
+      "AMD XDNA NPU IEEE Micro 2024 (A. Rico et al.)",
+      "arXiv:2504.03083 (Unlocking AMD NPU, bare-metal)",
+      "AM009 AI Engine Architecture Guide (Xilinx/AMD)",
+      "Reverse engineering FLM: qwen3_5vl_npu.dll (3396 functions, 544 dispatch patterns)",
+      "SHIM DMA AXI-Stream: ~24.5% BW efficiency (strided access + packet overhead)",
+      "VEH+Dr0 measurements: median 98.8ms/token FLM",
+      "xrt-smi: 98.8ms/token FLM, 51.3 TOPS INT8 peak"
+    ],
+    "platform": {
+      "name": "Strix Point",
+      "ddr5_peak_gbs": 89.6,
+      "ddr5_eff_gbs": 21.93,
+      "ddr5_eff_note": "24.5% of peak \u00e2\u20ac\u201d SHIM DMA strided access, NoC contention with iGPU display",
+      "shim_dma_efficiency": 0.245,
+      "eta_transfer": 0.7309,
+      "npu_peak_tops_int8": 51.3,
+      "npu_peak_tops_int4": 102.6,
+      "npu_eff_tops_int8": 35.0,
+      "npu_eff_tops_int4": 70.0,
+      "npu_sram_mb": 2.0,
+      "npu_sram_note": "64KB x 32 tiles \u00e2\u20ac\u201d impossible to fit 9B model weights (5 GB)",
+      "n_cols": 1,
+      "n_rows": 4,
+      "gemm_block_size": 256
+    },
+    "flm_overhead": {
+      "dispatch_ms": 60.0,
+      "dispatch_note": "0x310D0 CPU decode loop \u00e2\u20ac\u201d 54% of total 111ms/token",
+      "dma_sync_ms": 20.0,
+      "dma_note": "xrtBO_sync host->NPU \u00e2\u20ac\u201d 18% of total",
+      "npu_compute_ms": 5.0,
+      "npu_compute_note": "Pure NPU MatMul \u00e2\u20ac\u201d 4.5% of total",
+      "wakeup_sampling_ms": 26.0,
+      "wakeup_note": "Post-NPU wakeup + token sampling \u00e2\u20ac\u201d 24% of total",
+      "total_ms_per_token": 111.0,
+      "ioctls_per_token": 50,
+      "ioctl_detail": "DMA_SUBMIT(x12.6), DMA_WAIT(x12.9), SUSPEND(x12.6), RESUME(x12.6)"
+    },
+    "ogad_overhead": {
+      "dispatch_ms": 0.0,
+      "dispatch_note": "No FLM middleware \u00e2\u20ac\u201d DirectML handles scheduling",
+      "cache_factor": 0.57,
+      "cache_factor_note": "Fraction of weights reloaded per step. Calibrated on TinyLlama (1-remaining_in_sram)",
+      "max_tps_tinyllama": 74.8
+    },
+    "qwen35_9b_params": {
+      "n_layers": 32,
+      "n_full_attn": 8,
+      "n_linear_attn": 24,
+      "n_mtp": 0,
+      "hidden_size": 4096,
+      "intermediate_size": 12288,
+      "n_heads": 32,
+      "n_kv_heads": 4,
+      "head_dim": 256,
+      "full_attention_interval": 4,
+      "q4nx_tensors": 474,
+      "q4nx_size_gb": 5.05,
+      "q4nx_params": 6.87,
+      "flm_tps_measured": 7.45,
+      "ogad_tps_note": "Blocked: LinearAttention op not supported by DirectML 1.24.4"
+    },
+    "bpe": {
+      "INT4": 0.5,
+      "INT8": 1.0,
+      "BF16": 2.0,
+      "FP16": 2.0,
+      "FP32": 4.0
+    },
+    "q4nx_format": {
+      "I8_is_int8_not_q4_1": true,
+      "note": "I8 = int8_t[] (8-bit) with BF16 per-channel scales stored in sibling tensor *.bf16.weight. Dequant: val_f32 = (float)int8_val * bf16_scale[out_channel]"
+    }
+  },
+  "model_architecture": {
+    "n_layers": 32,
+    "n_full_attn": 8,
+    "n_linear_attn": 24,
+    "n_mtp": 1,
+    "layer_types": [
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention",
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention"
+    ],
+    "n_heads": 16,
+    "n_kv_heads": 4,
+    "head_dim": 256,
+    "hidden_size": 4096,
+    "intermediate_size": 12288,
+    "max_ctx": 262144,
+    "has_vision": true,
+    "vision_layers": 0,
+    "vision_embed": 0
+  },
+  "kv_cache": {
+    "kv_full_attn_gb": 0.0671,
+    "kv_total_gb": 0.0755,
+    "kv_naive_gb": 0.2684,
+    "kv_savings_gb": 0.1929,
+    "ctx_len": 4096,
+    "kv_dtype": "INT8",
+    "n_full_attn_layers": 8
+  },
+  "performance_estimate": {
+    "tps_predicted": 7.16,
+    "total_ms_per_token": 139.7,
+    "dispatch_ms": 0,
+    "dma_ms": 134.7,
+    "npu_compute_ms": 5.0,
+    "wakeup_ms": 0,
+    "bottleneck": "DMA transfer",
+    "bottleneck_details": [
+      [
+        "DMA transfer",
+        134.7
+      ],
+      [
+        "NPU compute",
+        5.0
+      ]
+    ],
+    "w_eff_gb_per_step": 2.878,
+    "kv_gb_per_step": 0.075,
+    "bw_eff_gbs": 21.93,
+    "bw_limit_tps": 7.42,
+    "shim_peak_tps": 7.43,
+    "flm_measured_tps": 7.45,
+    "format_counts": {
+      "INT4": 192,
+      "BF16": 16,
+      "INT8": 23
+    },
+    "total_weight_gb": 5.05,
+    "buffer_pool_gb": 2.878,
+    "runtime": "ogad"
+  },
+  "frozen_layers": {
+    "model.layers.0.q_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.0.k_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.0.v_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.0.o_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.0.gate_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.0.up_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.0.down_proj.weight": {
+      "layer_idx": 0,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.q_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.k_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.v_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.o_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.gate_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.up_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.1.down_proj.weight": {
+      "layer_idx": 1,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.q_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.k_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.v_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.o_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.gate_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.up_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.2.down_proj.weight": {
+      "layer_idx": 2,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.q_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.k_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.v_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.o_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.gate_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.up_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.3.down_proj.weight": {
+      "layer_idx": 3,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.q_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.k_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.v_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.o_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.gate_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.up_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.4.down_proj.weight": {
+      "layer_idx": 4,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.q_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.k_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.v_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.o_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.gate_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.up_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.5.down_proj.weight": {
+      "layer_idx": 5,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.q_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.k_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.v_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.o_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.gate_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.up_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.6.down_proj.weight": {
+      "layer_idx": 6,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.q_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.k_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.v_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.o_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.gate_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.up_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.7.down_proj.weight": {
+      "layer_idx": 7,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.q_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.k_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.v_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.o_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.gate_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.up_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.8.down_proj.weight": {
+      "layer_idx": 8,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.q_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.k_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.v_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.o_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.gate_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.up_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.9.down_proj.weight": {
+      "layer_idx": 9,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.q_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.k_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.v_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.o_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.gate_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.up_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.10.down_proj.weight": {
+      "layer_idx": 10,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.q_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.k_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.v_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.o_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.gate_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.up_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.11.down_proj.weight": {
+      "layer_idx": 11,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.q_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.k_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.v_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.o_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.gate_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.up_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.12.down_proj.weight": {
+      "layer_idx": 12,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.q_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.k_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.v_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.o_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.gate_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.up_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.13.down_proj.weight": {
+      "layer_idx": 13,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.q_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.k_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.v_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.o_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.gate_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.up_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.14.down_proj.weight": {
+      "layer_idx": 14,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.q_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.k_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.v_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.o_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.gate_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.up_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.15.down_proj.weight": {
+      "layer_idx": 15,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.q_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.k_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.v_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.o_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.gate_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.up_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.16.down_proj.weight": {
+      "layer_idx": 16,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.q_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.k_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.v_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.o_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.gate_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.up_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.17.down_proj.weight": {
+      "layer_idx": 17,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.q_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.k_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.v_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.o_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.gate_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.up_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.18.down_proj.weight": {
+      "layer_idx": 18,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.q_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.k_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.v_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.o_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.gate_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.up_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.19.down_proj.weight": {
+      "layer_idx": 19,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.q_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.k_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.v_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.o_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.gate_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.up_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.20.down_proj.weight": {
+      "layer_idx": 20,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.q_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.k_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.v_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.o_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.gate_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.up_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.21.down_proj.weight": {
+      "layer_idx": 21,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.q_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.k_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.v_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.o_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.gate_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.up_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.22.down_proj.weight": {
+      "layer_idx": 22,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.q_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.k_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.v_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.o_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.gate_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.up_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.23.down_proj.weight": {
+      "layer_idx": 23,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.q_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.k_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.v_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.o_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.gate_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.up_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.24.down_proj.weight": {
+      "layer_idx": 24,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.q_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.k_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.v_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.o_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.gate_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.up_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.25.down_proj.weight": {
+      "layer_idx": 25,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.q_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.k_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.v_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.o_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.gate_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.up_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.26.down_proj.weight": {
+      "layer_idx": 26,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.q_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.k_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.v_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.o_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.gate_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.up_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.27.down_proj.weight": {
+      "layer_idx": 27,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.q_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.k_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.v_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.o_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.gate_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.up_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.28.down_proj.weight": {
+      "layer_idx": 28,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.q_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.k_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.v_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.o_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.gate_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.up_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.29.down_proj.weight": {
+      "layer_idx": 29,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.q_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "q_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.k_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "k_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.v_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.o_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.gate_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.up_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.30.down_proj.weight": {
+      "layer_idx": 30,
+      "layer_type": "linear_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.q_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "q_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.k_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "k_proj",
+      "xdna2_format": "BF16",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.v_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.o_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.gate_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "gate_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.up_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "up_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.layers.31.down_proj.weight": {
+      "layer_idx": 31,
+      "layer_type": "full_attention",
+      "op": "down_proj",
+      "xdna2_format": "INT4",
+      "has_kv_cache": false,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.q_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "q_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.k_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "k_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.v_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "v_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.o_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "o_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.gate_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "gate_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.up_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "up_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    },
+    "model.mtp_layers.0.down_proj.weight": {
+      "layer_idx": 32,
+      "layer_type": "mtp",
+      "op": "down_proj",
+      "xdna2_format": "INT8",
+      "has_kv_cache": true,
+      "exec_target": "NPU"
+    }
+  }
+}

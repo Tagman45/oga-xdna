@@ -1,0 +1,7 @@
+# Poids modèles (plusieurs GB) — jamais versionnés
+*.onnx.data
+# Objets/artefacts de build
+*.obj
+*.pyc
+__pycache__/
+.cache/
