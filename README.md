@@ -57,3 +57,17 @@ Les wrappers ONNX (`model.onnx`, tokenizer, config) sont inclus pour
 `tinyllama_oga` et `qwen2_oga`. Les poids (`model.onnx.data`, 0.9-14 GB) ne
 sont pas versionnés (limite GitHub) — à générer via `gguf_to_oga.py` ou à
 télécharger depuis le hub ONNX correspondant.
+
+## Licence et dépendances
+
+Ce dépôt contient le code de l'auteur (interface de démonstration pour OGA /
+ONNX Runtime GenAI sur NPU XDNA2). Il **n'inclut pas de code copié d'autres
+projets** :
+- Le code utilise les API des bibliothèques tierces suivantes (sans les
+  incorporer) :
+  - onnxruntime-genai (ONNX Runtime GenAI) - licence MIT
+  - gguf (gguf-py) - licence MIT
+  - win32pipe / pywin32 - licence PSF
+  - DLL système Windows (KERNEL32)
+- Aucun marqueur copyright / SPDX d'un tiers n'est présent dans le code.
+- Les binaires compilés ne lient que KERNEL32.dll et onnxruntime-genai.dll.
